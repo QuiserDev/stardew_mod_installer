@@ -25,7 +25,6 @@ def resource_path(relative_path):
 
 
 TUTORIAL_TEXT = """
-
 <div style='background: linear-gradient(to right, #a8d8b9, #81c29c); padding: 10px; border-radius: 8px; margin: 10px 0;'>
 <h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>1. 设置Mods文件夹</h2>
 </div>
@@ -41,7 +40,7 @@ Steam → Stardew Valley → 齿轮图标(管理) → 浏览本地文件 → Mod
 <h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>2. 安装Mod</h2>
 </div>
 <ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
-<li><strong>拖放安装</strong>：将zip文件拖放到窗口中的虚线框区域</li>
+<li><strong>拖放安装</strong>：将zip文件直接拖放到窗口中</li>
 <li><strong>手动选择</strong>：点击"手动选择Mod文件"按钮</li>
 <li><strong>自动解压</strong>：程序会自动解压到Mods文件夹</li>
 </ul>
@@ -73,9 +72,8 @@ Steam → Stardew Valley → 齿轮图标(管理) → 浏览本地文件 → Mod
 <li>安装新Mod时，建议逐个测试兼容性</li>
 <li>查看Mod的说明文档，了解具体功能和使用方法</li>
 </ul>
-
-
 """
+
 
 class TutorialDialog(QDialog):
     """自定义教程对话框"""
@@ -227,56 +225,47 @@ class ModInstallWorker(QThread):
         self.mods_folder = mods_folder
 
     def run(self):
+        """线程运行函数"""
         try:
-            self.status.emit(f"正在安装: {os.path.basename(self.zip_path)}")
-
-            # 打开zip文件
+            self.status.emit("开始安装Mod...")
+            self.progress.emit(10)
+            
+            # 检查文件是否存在
+            if not os.path.exists(self.zip_path):
+                self.finished.emit(False, f"文件不存在: {self.zip_path}")
+                return
+            
+            # 检查Mods文件夹是否存在
+            if not os.path.exists(self.mods_folder):
+                self.finished.emit(False, f"Mods文件夹不存在: {self.mods_folder}")
+                return
+            
+            self.status.emit("正在解压Mod文件...")
+            self.progress.emit(30)
+            
+            # 解压ZIP文件
             with zipfile.ZipFile(self.zip_path, 'r') as zip_ref:
-                # 获取所有文件
+                # 获取所有文件列表
                 file_list = zip_ref.namelist()
-
-                # 分析zip结构，判断是否有顶级文件夹
-                has_top_folder = self._has_top_level_folder(file_list)
-
-                if has_top_folder:
-                    # 如果有顶级文件夹，直接解压到mods文件夹
-                    zip_ref.extractall(self.mods_folder)
-                    self.status.emit("✓ Mod已解压到mods文件夹")
-                else:
-                    # 如果没有顶级文件夹，创建一个以zip文件名为名的文件夹
-                    mod_name = os.path.splitext(
-                        os.path.basename(self.zip_path))[0]
-                    target_folder = os.path.join(self.mods_folder, mod_name)
-                    os.makedirs(target_folder, exist_ok=True)
-
-                    # 解压到创建的文件夹
-                    zip_ref.extractall(target_folder)
-                    self.status.emit(f"✓ Mod已安装到: {mod_name}")
-
-            self.finished.emit(
-                True, f"成功安装: {os.path.basename(self.zip_path)}")
-
+                
+                # 检查是否包含manifest.json
+                has_manifest = any('manifest.json' in f.lower() for f in file_list)
+                
+                if not has_manifest:
+                    self.status.emit("警告：未找到manifest.json，可能不是标准Mod文件")
+                
+                # 解压到Mods文件夹
+                zip_ref.extractall(self.mods_folder)
+            
+            self.status.emit("Mod安装完成！")
+            self.progress.emit(100)
+            
+            # 获取Mod名称（从文件名推断）
+            mod_name = os.path.basename(self.zip_path).replace('.zip', '')
+            self.finished.emit(True, f"✅ Mod安装成功: {mod_name}")
+            
         except Exception as e:
-            self.finished.emit(False, f"安装失败: {str(e)}")
-
-    def _has_top_level_folder(self, file_list):
-        """检查zip是否包含顶级文件夹"""
-        if not file_list:
-            return False
-
-        # 获取第一个文件的路径结构
-        first_file = file_list[0]
-        parts = first_file.split('/')
-
-        # 如果所有文件都在同一个顶级文件夹下
-        if len(parts) > 1:
-            top_folder = parts[0]
-            # 检查是否所有文件都以这个文件夹开头
-            for file in file_list[1:]:
-                if not file.startswith(top_folder + '/'):
-                    return False
-            return True
-        return False
+            self.finished.emit(False, f"❌ Mod安装失败: {str(e)}")
 
 
 class StardewModInstaller(QMainWindow):
@@ -447,62 +436,31 @@ class StardewModInstaller(QMainWindow):
         # 将下方布局添加到主布局中
         main_layout.addLayout(bottom_layout)
 
-        # 从外部文件加载样式
+        # 加载样式表
+        self.load_stylesheet()
+
+    def load_stylesheet(self):
+        """加载样式表"""
         try:
-            with open("style.qss", "r", encoding="utf-8") as f:
-                style = f.read()
-            self.setStyleSheet(style)
-        except FileNotFoundError:
-            # 如果样式文件不存在，使用默认样式
-            pass
+            stylesheet_path = resource_path("style.qss")
+            if os.path.exists(stylesheet_path):
+                with open(stylesheet_path, 'r', encoding='utf-8') as f:
+                    self.setStyleSheet(f.read())
+        except Exception as e:
+            print(f"加载样式表失败: {e}")
 
     def load_settings(self):
-        """加载保存的设置"""
+        """加载设置"""
         self.mods_folder = self.settings.value("mods_folder")
-
         if self.mods_folder and os.path.exists(self.mods_folder):
             self.folder_label.setText(self.mods_folder)
             self.open_folder_btn.setEnabled(True)
             self.install_btn.setEnabled(True)
-        else:
-            # 尝试自动查找mods文件夹
-            self.auto_find_mods_folder()
 
-    def auto_find_mods_folder(self):
-        """自动查找星露谷mods文件夹"""
-        possible_paths = []
-
-        # Steam默认安装路径
-        steam_paths = [
-            r"C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley",
-            r"C:\Program Files\Steam\steamapps\common\Stardew Valley",
-            r"D:\Program Files (x86)\Steam\steamapps\common\Stardew Valley",
-            r"D:\Program Files\Steam\steamapps\common\Stardew Valley",
-            r"E:\Program Files (x86)\Steam\steamapps\common\Stardew Valley",
-            r"E:\Program Files\Steam\steamapps\common\Stardew Valley",
-        ]
-
-        for steam_path in steam_paths:
-            mods_path = os.path.join(steam_path, "Mods")
-            if os.path.exists(mods_path):
-                possible_paths.append(mods_path)
-
-        # 检查AppData中的mods文件夹
-        appdata_path = os.path.join(
-            os.getenv('APPDATA'), "StardewValley", "Mods")
-        if os.path.exists(appdata_path):
-            possible_paths.append(appdata_path)
-
-        if possible_paths:
-            # 使用第一个找到的路径
-            self.mods_folder = possible_paths[0]
-            self.folder_label.setText(f"自动检测到: {self.mods_folder}")
-            self.open_folder_btn.setEnabled(True)
-            self.install_btn.setEnabled(True)
-            self.settings.setValue("mods_folder", self.mods_folder)
-            self.add_status("✓ 自动检测到Mods文件夹")
-        else:
-            self.show_folder_prompt()
+    def open_mods_folder(self):
+        """打开Mods文件夹"""
+        if self.mods_folder and os.path.exists(self.mods_folder):
+            os.startfile(self.mods_folder)
 
     def show_folder_prompt(self):
         """显示文件夹选择提示"""
@@ -539,18 +497,10 @@ class StardewModInstaller(QMainWindow):
             self.settings.setValue("mods_folder", folder)
             self.add_status("✓ Mods文件夹已设置")
 
-    def open_mods_folder(self):
-        """打开Mods文件夹"""
-        if self.mods_folder and os.path.exists(self.mods_folder):
-            os.startfile(self.mods_folder)
-
     def drag_enter_event(self, event: QDragEnterEvent):
         """拖拽进入事件"""
         if event.mimeData().hasUrls():
-            urls = event.mimeData().urls()
-            # 检查是否都是zip文件
-            if all(url.toLocalFile().lower().endswith('.zip') for url in urls):
-                event.acceptProposedAction()
+            event.acceptProposedAction()
 
     def drop_event(self, event: QDropEvent):
         """拖拽释放事件"""
@@ -580,33 +530,24 @@ class StardewModInstaller(QMainWindow):
         for file_path in files:
             self.install_mod(file_path)
 
-    def install_mod(self, zip_path):
+    def install_mod(self, file_path):
         """安装Mod"""
-        try:
-            # 检查文件是否存在
-            if not os.path.exists(zip_path):
-                self.add_status(f"✗ 文件不存在: {zip_path}")
-                return
+        if not self.mods_folder:
+            QMessageBox.warning(self, "错误", "请先设置Mods文件夹")
+            return
 
-            # 检查是否是zip文件
-            if not zipfile.is_zipfile(zip_path):
-                self.add_status(f"✗ 不是有效的ZIP文件: {os.path.basename(zip_path)}")
-                return
-
-            # 创建工作线程
-            self.worker = ModInstallWorker(zip_path, self.mods_folder)
-            self.worker.status.connect(self.add_status)
-            self.worker.finished.connect(self.on_installation_finished)
-
-            # 显示进度条
-            self.progress_bar.setVisible(True)
-            self.progress_bar.setRange(0, 0)  # 不确定进度
-
-            # 启动线程
-            self.worker.start()
-
-        except Exception as e:
-            self.add_status(f"✗ 安装失败: {str(e)}")
+        # 创建后台工作线程
+        self.worker = ModInstallWorker(file_path, self.mods_folder)
+        self.worker.progress.connect(self.progress_bar.setValue)
+        self.worker.status.connect(self.add_status)
+        self.worker.finished.connect(self.on_installation_finished)
+        
+        # 显示进度条
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        
+        # 启动线程
+        self.worker.start()
 
     def on_installation_finished(self, success, message):
         """安装完成回调"""
@@ -627,31 +568,9 @@ class StardewModInstaller(QMainWindow):
 
     def add_status(self, message):
         """添加状态消息"""
-        # 根据消息类型添加不同的颜色
-        timestamp = f"[{self.get_current_time()}]"
-        if "✓" in message or "成功" in message:
-            # 成功消息 - 绿色
-            self.status_text.setTextColor("#2e7d32")
-            self.status_text.append(f"{timestamp} {message}")
-        elif "✗" in message or "失败" in message or "错误" in message:
-            # 错误消息 - 红色
-            self.status_text.setTextColor("#c62828")
-            self.status_text.append(f"{timestamp} {message}")
-        elif "警告" in message or "注意" in message:
-            # 警告消息 - 橙色
-            self.status_text.setTextColor("#ef6c00")
-            self.status_text.append(f"{timestamp} {message}")
-        else:
-            # 普通消息 - 默认颜色
-            self.status_text.setTextColor("#333333")
-            self.status_text.append(f"{timestamp} {message}")
-        
-        # 恢复默认颜色
-        self.status_text.setTextColor("#333333")
-        
-        self.status_text.verticalScrollBar().setValue(
-            self.status_text.verticalScrollBar().maximum()
-        )
+        timestamp = self.get_current_time()
+        formatted_message = f"[{timestamp}] {message}"
+        self.status_text.append(formatted_message)
 
     def get_current_time(self):
         """获取当前时间字符串"""
@@ -699,38 +618,25 @@ class StardewModInstaller(QMainWindow):
             self.add_status(f"刷新Mod列表失败: {str(e)}")
 
     def get_mod_info(self, mod_path):
-        """从mod文件夹的manifest.json中获取mod信息"""
+        """获取Mod信息"""
         manifest_path = os.path.join(mod_path, "manifest.json")
         
-        if not os.path.exists(manifest_path):
-            # 如果没有manifest.json，返回文件夹名称
-            folder_name = os.path.basename(mod_path)
-            return f"{folder_name}"
-        
-        try:
-            with open(manifest_path, 'r', encoding='utf-8-sig') as f:
-                manifest_data = json5.load(f)
-            
-            # 提取基本信息
-            name = manifest_data.get("Name", "未知名称")
-            
-            # 查找Nexus更新链接
-            nexus_id = ""
-            update_keys = manifest_data.get("UpdateKeys", [])
-            for item in update_keys:
-                if isinstance(item, str) and item.startswith("Nexus:"):
-                    nexus_id = item.split(":")[-1]
-                    break
-            
-            # 格式化显示文本
-            if nexus_id:
-                return f"{name} ({nexus_id})"
-
-            return name
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path, 'r', encoding='utf-8') as f:
+                    manifest = json5.load(f)
                 
-        except Exception as e:
-            folder_name = os.path.basename(mod_path)
-            return f"{folder_name} (解析manifest失败: {str(e)})"
+                name = manifest.get("Name", os.path.basename(mod_path))
+                author = manifest.get("Author", "未知作者")
+                version = manifest.get("Version", "未知版本")
+                
+                return f"{name} - v{version} ({author})"
+            
+            except Exception:
+                pass
+        
+        # 如果没有manifest.json，返回文件夹名
+        return os.path.basename(mod_path)
 
     def load_installed_mods(self):
         """加载已安装的Mod（在初始化时调用）"""
