@@ -9,7 +9,18 @@ from PySide6.QtWidgets import (QApplication, QListWidgetItem, QMainWindow, QWidg
                                QFileDialog, QMessageBox, QProgressBar,
                                QGroupBox, QFrame, QListWidget)
 from PySide6.QtCore import Qt, QThread, Signal, QSettings, QTimer
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon
+
+
+def resource_path(relative_path):
+    """获取资源文件的绝对路径，适用于开发环境和打包后的环境"""
+    try:
+        # PyInstaller 创建临时文件夹，并将路径存储在 _MEIPASS 中
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
 
 
 TUTORIAL_TEXT = """
@@ -123,6 +134,8 @@ class StardewModInstaller(QMainWindow):
     def init_ui(self):
         """初始化UI"""
         self.setWindowTitle("星露谷物语 Mod 安装器")
+        icon_path = resource_path("icon.ico")
+        self.setWindowIcon(QIcon(icon_path))
         self.setGeometry(100, 100, 800, 600)
 
         # 设置拖放接受
