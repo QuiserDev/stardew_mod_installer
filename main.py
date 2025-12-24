@@ -12,6 +12,41 @@ from PySide6.QtCore import Qt, QThread, Signal, QSettings, QTimer
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 
+TUTORIAL_TEXT = """
+1. 设置Mods文件夹
+    - 首次启动会自动尝试查找
+    - 如果找不到，请手动选择，路径如下
+    - Steam -> Stardew Valley -> 齿轮图标(管理) -> 浏览本地文件 -> Mods子文件夹
+
+2. 安装Mod
+    - 将zip文件拖放到窗口中
+    - 或点击"手动选择Mod文件"
+    - 程序会自动解压到Mods文件夹
+
+3. 注意事项
+    - 确保星露谷已安装SMAPI
+    - SMAPI也可以用本软件安装
+    - 安装后需要重启游戏
+    - 某些Mod可能需要依赖项
+
+4. 常见问题
+    - Mod不工作？检查是否解压正确
+    - 游戏崩溃？检查Mod兼容性
+    - 需要更新？删除旧版再安装新版
+"""
+
+
+DELETE_CONFIRMATION = """您确定要删除以下Mod吗？
+
+{}
+
+注意：
+• Mod之间可能存在依赖关系
+• 删除某些Mod可能导致其他Mod无法正常工作
+• 删除后需要重启游戏
+
+请确认是否继续删除？"""
+
 class ModInstallWorker(QThread):
     """后台线程用于安装Mod"""
     progress = Signal(int)
@@ -205,7 +240,7 @@ class StardewModInstaller(QMainWindow):
         self.status_text = QTextEdit()
         self.status_text.setReadOnly(True)
         self.status_text.setMaximumHeight(150)
-        self.status_text.setPlaceholderText("安装状态将显示在这里...")
+        self.status_text.setPlaceholderText("无日志")
         right_layout.addWidget(self.status_text)
 
         # 按钮区域
@@ -215,7 +250,7 @@ class StardewModInstaller(QMainWindow):
         self.install_btn.clicked.connect(self.manual_select_mod)
         self.install_btn.setEnabled(False)
 
-        self.clear_btn = QPushButton("清空状态")
+        self.clear_btn = QPushButton("清空日志")
         self.clear_btn.clicked.connect(self.clear_status)
 
         self.help_btn = QPushButton("使用教程")
@@ -446,7 +481,7 @@ class StardewModInstaller(QMainWindow):
         return datetime.now().strftime("%H:%M:%S")
 
     def clear_status(self):
-        """清空状态"""
+        """清空日志"""
         self.status_text.clear()
 
     def refresh_installed_mods(self):
@@ -557,16 +592,7 @@ class StardewModInstaller(QMainWindow):
         
         # 创建确认对话框
         mods_text = "\n".join([f"  - {display_text}" for display_text in display_texts])
-        confirmation_msg = f"""您确定要删除以下Mod吗？
-
-        {mods_text}
-
-        注意：
-        • Mod之间可能存在依赖关系
-        • 删除某些Mod可能导致其他Mod无法正常工作
-        • 删除后需要重启游戏
-
-        请确认是否继续删除？"""
+        confirmation_msg = DELETE_CONFIRMATION.format(mods_text)
 
         reply = QMessageBox.question(
             self,
@@ -609,34 +635,10 @@ class StardewModInstaller(QMainWindow):
 
     def show_tutorial(self):
         """显示教程"""
-        tutorial_text = """
-        ====== 星露谷Mod安装器使用教程 ======
-        
-        1. 设置Mods文件夹
-           - 首次启动会自动尝试查找
-           - 如果找不到，请手动选择，路径如下
-           - Steam - Stardew Valley - 齿轮图标(管理) - 浏览本地文件 - Mods子文件夹
-        
-        2. 安装Mod
-           - 将zip文件拖放到窗口中
-           - 或点击"手动选择Mod文件"
-           - 程序会自动解压到Mods文件夹
-        
-        3. 注意事项
-           - 确保星露谷已安装SMAPI
-           - SMAPI也可以用本软件安装
-           - 安装后需要重启游戏
-           - 某些Mod可能需要依赖项
-        
-        4. 常见问题
-           - Mod不工作？检查是否解压正确
-           - 游戏崩溃？检查Mod兼容性
-           - 需要更新？删除旧版再安装新版
-        """
 
         msg = QMessageBox(self)
         msg.setWindowTitle("使用教程")
-        msg.setText(tutorial_text)
+        msg.setText(TUTORIAL_TEXT)
         msg.exec()
 
     def closeEvent(self, event):
