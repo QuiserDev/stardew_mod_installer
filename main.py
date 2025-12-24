@@ -1,11 +1,14 @@
 import sys
 import os
+import json5
 import zipfile
+from datetime import datetime
+
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QLabel, QPushButton, QTextEdit,
                                QFileDialog, QMessageBox, QProgressBar,
-                               QGroupBox, QFrame)
-from PySide6.QtCore import Qt, QThread, Signal, QSettings
+                               QGroupBox, QFrame, QListWidget)
+from PySide6.QtCore import Qt, QThread, Signal, QSettings, QTimer
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 
@@ -80,6 +83,7 @@ class StardewModInstaller(QMainWindow):
         self.settings = QSettings("StardewModInstaller", "Config")
         self.init_ui()
         self.load_settings()
+        self.load_installed_mods()
 
     def init_ui(self):
         """初始化UI"""
@@ -93,15 +97,18 @@ class StardewModInstaller(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # 主布局
+        # 主布局 - 垂直布局（标题和文件夹在上，下方是左右分栏）
         main_layout = QVBoxLayout(central_widget)
 
+        # 顶部区域 - 标题和Mods文件夹位置（居中）
+        top_layout = QVBoxLayout()
+        
         # 标题
         title_label = QLabel("星露谷物语 Mod 安装器")
         title_label.setStyleSheet(
             "font-size: 24px; font-weight: bold; padding: 10px;")
         title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+        top_layout.addWidget(title_label)
 
         # Mods文件夹显示区域
         folder_group = QGroupBox("Mods文件夹位置")
@@ -111,6 +118,7 @@ class StardewModInstaller(QMainWindow):
         self.folder_label.setStyleSheet(
             "padding: 5px; background-color: #f0f0f0; border: 1px solid #ccc;")
         self.folder_label.setWordWrap(True)
+        self.folder_label.setAlignment(Qt.AlignCenter)  # 居中对齐
         folder_layout.addWidget(self.folder_label)
 
         folder_btn_layout = QHBoxLayout()
@@ -125,7 +133,44 @@ class StardewModInstaller(QMainWindow):
         folder_layout.addLayout(folder_btn_layout)
 
         folder_group.setLayout(folder_layout)
-        main_layout.addWidget(folder_group)
+        top_layout.addWidget(folder_group)
+        
+        main_layout.addLayout(top_layout)
+
+        # 下方区域 - 左右分栏布局
+        bottom_layout = QHBoxLayout()
+
+        # 左侧布局 - 已安装Mod区域
+        left_layout = QVBoxLayout()
+
+        # 已安装Mod显示区域
+        installed_mods_group = QGroupBox("已安装的Mod")
+        installed_mods_layout = QVBoxLayout()
+
+        # Mod列表显示
+        self.mods_list = QListWidget()
+        self.mods_list.setSelectionMode(QListWidget.ExtendedSelection)
+        installed_mods_layout.addWidget(self.mods_list)
+
+        # Mod管理按钮
+        mod_management_layout = QHBoxLayout()
+        
+        self.refresh_mods_btn = QPushButton("刷新Mod列表")
+        self.refresh_mods_btn.clicked.connect(self.refresh_installed_mods)
+        
+        self.delete_mods_btn = QPushButton("删除选中Mod")
+        self.delete_mods_btn.clicked.connect(self.delete_selected_mods)
+        self.delete_mods_btn.setStyleSheet("background-color: #f44336;")  # Red background
+        
+        mod_management_layout.addWidget(self.refresh_mods_btn)
+        mod_management_layout.addWidget(self.delete_mods_btn)
+        
+        installed_mods_layout.addLayout(mod_management_layout)
+        installed_mods_group.setLayout(installed_mods_layout)
+        left_layout.addWidget(installed_mods_group)
+
+        # 右侧布局 - 拖放区域和状态区域
+        right_layout = QVBoxLayout()
 
         # 拖放区域
         drop_frame = QFrame()
@@ -149,19 +194,19 @@ class StardewModInstaller(QMainWindow):
         drop_frame.dragEnterEvent = self.drag_enter_event
         drop_frame.dropEvent = self.drop_event
 
-        main_layout.addWidget(drop_frame)
+        right_layout.addWidget(drop_frame)
 
         # 进度条
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        main_layout.addWidget(self.progress_bar)
+        right_layout.addWidget(self.progress_bar)
 
         # 状态显示
         self.status_text = QTextEdit()
         self.status_text.setReadOnly(True)
         self.status_text.setMaximumHeight(150)
         self.status_text.setPlaceholderText("安装状态将显示在这里...")
-        main_layout.addWidget(self.status_text)
+        right_layout.addWidget(self.status_text)
 
         # 按钮区域
         button_layout = QHBoxLayout()
@@ -180,7 +225,14 @@ class StardewModInstaller(QMainWindow):
         button_layout.addWidget(self.clear_btn)
         button_layout.addWidget(self.help_btn)
 
-        main_layout.addLayout(button_layout)
+        right_layout.addLayout(button_layout)
+
+        # 将左右布局添加到下方布局中
+        bottom_layout.addLayout(left_layout)
+        bottom_layout.addLayout(right_layout)
+
+        # 将下方布局添加到主布局中
+        main_layout.addLayout(bottom_layout)
 
         # 设置样式
         self.setStyleSheet("""
@@ -391,12 +443,169 @@ class StardewModInstaller(QMainWindow):
 
     def get_current_time(self):
         """获取当前时间字符串"""
-        from datetime import datetime
         return datetime.now().strftime("%H:%M:%S")
 
     def clear_status(self):
         """清空状态"""
         self.status_text.clear()
+
+    def refresh_installed_mods(self):
+        """刷新已安装的Mod列表"""
+        if not self.mods_folder or not os.path.exists(self.mods_folder):
+            self.mods_list.clear()
+            self.add_status("未设置Mods文件夹或文件夹不存在")
+            return
+
+        self.mods_list.clear()
+        
+        try:
+            # 获取Mods文件夹中的所有项目
+            items = os.listdir(self.mods_folder)
+            
+            # 过滤出文件夹（Mod通常以文件夹形式存在）
+            mods = []
+            for item in items:
+                item_path = os.path.join(self.mods_folder, item)
+                if os.path.isdir(item_path):
+                    mods.append(item)
+            
+            # 按名称排序
+            mods.sort()
+            
+            # 添加到列表中，显示从manifest.json中提取的信息
+            for mod in mods:
+                mod_path = os.path.join(self.mods_folder, mod)
+                mod_info = self.get_mod_info(mod_path)
+                
+                # 显示格式：名称 (版本) - 作者 [Nexus:数字]
+                display_text = mod_info
+                self.mods_list.addItem(display_text)
+            
+            self.add_status(f"已加载 {len(mods)} 个已安装的Mod")
+            
+        except Exception as e:
+            self.add_status(f"刷新Mod列表失败: {str(e)}")
+
+    def get_mod_info(self, mod_path):
+        """从mod文件夹的manifest.json中获取mod信息"""
+        manifest_path = os.path.join(mod_path, "manifest.json")
+        
+        if not os.path.exists(manifest_path):
+            # 如果没有manifest.json，返回文件夹名称
+            folder_name = os.path.basename(mod_path)
+            return f"{folder_name}"
+        
+        try:
+            with open(manifest_path, 'r', encoding='utf-8-sig') as f:
+                manifest_data = json5.load(f)
+            
+            # 提取基本信息
+            name = manifest_data.get("Name", "未知名称")
+            
+            # 查找Nexus更新链接
+            nexus_id = ""
+            update_keys = manifest_data.get("UpdateKeys", [])
+            for item in update_keys:
+                if isinstance(item, str) and item.startswith("Nexus:"):
+                    nexus_id = item.split(":")[-1]
+                    break
+            
+            # 格式化显示文本
+            if nexus_id:
+                return f"{name} ({nexus_id})"
+
+            return name
+                
+        except Exception as e:
+            folder_name = os.path.basename(mod_path)
+            return f"{folder_name} (解析manifest失败: {str(e)})"
+
+    def load_installed_mods(self):
+        """加载已安装的Mod（在初始化时调用）"""
+        # 延迟加载，确保UI完全初始化后再加载
+        QTimer.singleShot(100, self.refresh_installed_mods)
+
+    def delete_selected_mods(self):
+        """删除选中的Mod"""
+        selected_items = self.mods_list.selectedItems()
+        
+        if not selected_items:
+            QMessageBox.warning(self, "警告", "请先选择要删除的Mod")
+            return
+
+        # 获取选中的Mod显示文本
+        display_texts = [item.text() for item in selected_items]
+        
+        # 提取实际的文件夹名称（从显示文本中）
+        mod_names = []
+        for display_text in display_texts:
+            # 提取文件夹名称，处理不同的显示格式
+            if " (v" in display_text and ") - " in display_text:
+                # 格式: Name (vVersion) - Author [Nexus:ID] 或 Name (vVersion) - Author
+                folder_name = display_text.split(" (v")[0]
+                mod_names.append(folder_name)
+            else:
+                # 如果格式不符合预期，尝试直接使用显示文本的开始部分作为文件夹名
+                # 移除可能的后缀信息
+                if " (无manifest.json)" in display_text:
+                    folder_name = display_text.replace(" (无manifest.json)", "")
+                elif " (解析manifest失败:" in display_text:
+                    folder_name = display_text.split(" (解析manifest失败:")[0]
+                else:
+                    folder_name = display_text
+                mod_names.append(folder_name)
+        
+        # 创建确认对话框
+        mods_text = "\n".join([f"  - {display_text}" for display_text in display_texts])
+        confirmation_msg = f"""您确定要删除以下Mod吗？
+
+        {mods_text}
+
+        注意：
+        • Mod之间可能存在依赖关系
+        • 删除某些Mod可能导致其他Mod无法正常工作
+        • 删除后需要重启游戏
+
+        请确认是否继续删除？"""
+
+        reply = QMessageBox.question(
+            self,
+            "确认删除Mod",
+            confirmation_msg,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            deleted_count = 0
+            failed_count = 0
+
+            for i, folder_name in enumerate(mod_names):
+                try:
+                    mod_path = os.path.join(self.mods_folder, folder_name)
+                    
+                    if os.path.isdir(mod_path):
+                        import shutil
+                        shutil.rmtree(mod_path)
+                        self.add_status(f"✓ 已删除Mod: {display_texts[i]}")
+                        deleted_count += 1
+                    else:
+                        self.add_status(f"✗ Mod不存在: {display_texts[i]}")
+                        failed_count += 1
+                        
+                except Exception as e:
+                    self.add_status(f"✗ 删除Mod失败 {display_texts[i]}: {str(e)}")
+                    failed_count += 1
+
+            # 更新列表
+            self.refresh_installed_mods()
+            
+            # 显示结果
+            result_msg = f"删除完成！\n成功: {deleted_count} 个, 失败: {failed_count} 个"
+            if failed_count == 0:
+                QMessageBox.information(self, "删除完成", result_msg)
+            else:
+                QMessageBox.warning(self, "删除完成", result_msg)
 
     def show_tutorial(self):
         """显示教程"""
