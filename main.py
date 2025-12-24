@@ -4,7 +4,7 @@ import json5
 import zipfile
 from datetime import datetime
 
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+from PySide6.QtWidgets import (QApplication, QListWidgetItem, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QLabel, QPushButton, QTextEdit,
                                QFileDialog, QMessageBox, QProgressBar,
                                QGroupBox, QFrame, QListWidget)
@@ -512,9 +512,9 @@ class StardewModInstaller(QMainWindow):
                 mod_path = os.path.join(self.mods_folder, mod)
                 mod_info = self.get_mod_info(mod_path)
                 
-                # 显示格式：名称 (版本) - 作者 [Nexus:数字]
-                display_text = mod_info
-                self.mods_list.addItem(display_text)
+                mod_item = QListWidgetItem(mod_info)
+                mod_item.setData(Qt.UserRole, mod_path) # 记录实际路径
+                self.mods_list.addItem(mod_item)
             
             self.add_status(f"已加载 {len(mods)} 个已安装的Mod")
             
@@ -571,24 +571,8 @@ class StardewModInstaller(QMainWindow):
         # 获取选中的Mod显示文本
         display_texts = [item.text() for item in selected_items]
         
-        # 提取实际的文件夹名称（从显示文本中）
-        mod_names = []
-        for display_text in display_texts:
-            # 提取文件夹名称，处理不同的显示格式
-            if " (v" in display_text and ") - " in display_text:
-                # 格式: Name (vVersion) - Author [Nexus:ID] 或 Name (vVersion) - Author
-                folder_name = display_text.split(" (v")[0]
-                mod_names.append(folder_name)
-            else:
-                # 如果格式不符合预期，尝试直接使用显示文本的开始部分作为文件夹名
-                # 移除可能的后缀信息
-                if " (无manifest.json)" in display_text:
-                    folder_name = display_text.replace(" (无manifest.json)", "")
-                elif " (解析manifest失败:" in display_text:
-                    folder_name = display_text.split(" (解析manifest失败:")[0]
-                else:
-                    folder_name = display_text
-                mod_names.append(folder_name)
+        # 提取实际的文件夹路径
+        mod_paths = [item.data(Qt.UserRole) for item in selected_items]
         
         # 创建确认对话框
         mods_text = "\n".join([f"  - {display_text}" for display_text in display_texts])
@@ -606,9 +590,8 @@ class StardewModInstaller(QMainWindow):
             deleted_count = 0
             failed_count = 0
 
-            for i, folder_name in enumerate(mod_names):
+            for i, mod_path in enumerate(mod_paths):
                 try:
-                    mod_path = os.path.join(self.mods_folder, folder_name)
                     
                     if os.path.isdir(mod_path):
                         import shutil
