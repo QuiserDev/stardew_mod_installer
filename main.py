@@ -466,6 +466,7 @@ class StardewModInstaller(QMainWindow):
 
         if success:
             QMessageBox.information(self, "成功", "Mod安装完成！")
+            self.refresh_installed_mods()
         else:
             QMessageBox.warning(self, "错误", "Mod安装失败，请检查控制台输出。")
 
