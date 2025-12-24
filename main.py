@@ -7,7 +7,8 @@ from datetime import datetime
 from PySide6.QtWidgets import (QApplication, QListWidgetItem, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QLabel, QPushButton, QTextEdit,
                                QFileDialog, QMessageBox, QProgressBar,
-                               QGroupBox, QFrame, QListWidget)
+                               QGroupBox, QFrame, QListWidget, QDialog,
+                               QScrollArea, QTextBrowser)
 from PySide6.QtCore import Qt, QThread, Signal, QSettings, QTimer
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon
 
@@ -23,29 +24,184 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-TUTORIAL_TEXT = """📖 星露谷物语 Mod 安装器 使用教程
+TUTORIAL_TEXT = """
 
-1. 设置Mods文件夹
-    - 首次启动会自动尝试查找
-    - 如果找不到，请手动选择，路径如下
-    - Steam -> Stardew Valley -> 齿轮图标(管理) -> 浏览本地文件 -> Mods子文件夹
+<div style='background: linear-gradient(to right, #a8d8b9, #81c29c); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+<h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>1. 设置Mods文件夹</h2>
+</div>
+<ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
+<li><strong>首次启动</strong>会自动尝试查找Mods文件夹</li>
+<li><strong>如果找不到</strong>，请手动选择，路径如下：</li>
+<div style='background: rgba(139, 115, 85, 0.1); padding: 8px; border-radius: 4px; margin: 5px 0;'>
+Steam → Stardew Valley → 齿轮图标(管理) → 浏览本地文件 → Mods子文件夹
+</div>
+</ul>
 
-2. 安装Mod
-    - 将zip文件拖放到窗口中的虚线框区域
-    - 或点击"手动选择Mod文件"
-    - 程序会自动解压到Mods文件夹
+<div style='background: linear-gradient(to right, #ffd54f, #ffb74d); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+<h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>2. 安装Mod</h2>
+</div>
+<ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
+<li><strong>拖放安装</strong>：将zip文件拖放到窗口中的虚线框区域</li>
+<li><strong>手动选择</strong>：点击"手动选择Mod文件"按钮</li>
+<li><strong>自动解压</strong>：程序会自动解压到Mods文件夹</li>
+</ul>
 
-3. 注意事项
-    - 确保星露谷已安装SMAPI
-    - SMAPI也可以用本软件安装
-    - 安装后需要重启游戏
-    - 某些Mod可能需要依赖项
+<div style='background: linear-gradient(to right, #90caf9, #64b5f6); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+<h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>3. 注意事项</h2>
+</div>
+<ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
+<li><strong>SMAPI要求</strong>：确保星露谷已安装SMAPI</li>
+<li><strong>SMAPI安装</strong>：SMAPI也可以用本软件安装</li>
+<li><strong>重启游戏</strong>：安装后需要重启游戏生效</li>
+<li><strong>依赖项</strong>：某些Mod可能需要其他Mod支持</li>
+</ul>
 
-4. 常见问题
-    - Mod不工作？检查是否解压正确
-    - 游戏崩溃？检查Mod兼容性
-    - 需要更新？删除旧版再安装新版
+<div style='background: linear-gradient(to right, #ffab91, #ff8a65); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+<h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>4. 常见问题</h2>
+</div>
+<ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
+<li><strong>Mod不工作？</strong>检查是否解压正确，文件夹结构是否正确</li>
+<li><strong>游戏崩溃？</strong>检查Mod兼容性，移除冲突的Mod</li>
+<li><strong>需要更新？</strong>删除旧版再安装新版，避免文件冲突</li>
+</ul>
+
+<div style='background: linear-gradient(to right, #ce93d8, #ba68c8); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+<h2 style='color: #2e2e2e; font-size: 16px; margin: 0;'>💡 小贴士</h2>
+</div>
+<ul style='color: #5d4037; font-size: 13px; line-height: 1.6;'>
+<li>定期备份Mods文件夹，避免意外丢失</li>
+<li>安装新Mod时，建议逐个测试兼容性</li>
+<li>查看Mod的说明文档，了解具体功能和使用方法</li>
+</ul>
+
+
 """
+
+class TutorialDialog(QDialog):
+    """自定义教程对话框"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("📚 星露谷物语 Mod 安装器 - 使用教程")
+        self.setModal(True)
+        self.setMinimumSize(700, 600)
+        self.setMaximumSize(900, 800)
+        self.init_ui()
+        
+    def init_ui(self):
+        """初始化UI"""
+        # 主布局
+        main_layout = QVBoxLayout(self)
+        
+        # 标题
+        title_label = QLabel("📖 星露谷物语 Mod 安装器 使用教程")
+        title_label.setStyleSheet("""
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #5d4037; 
+            padding: 15px; 
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e6d4b3, stop:1 #c8b89d);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(title_label)
+        
+        # 滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: 2px solid #8b7355;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.9);
+            }
+            QScrollBar:vertical {
+                background: #e6d4b3;
+                width: 15px;
+                border-radius: 7px;
+            }
+            QScrollBar::handle:vertical {
+                background: #8b7355;
+                border-radius: 7px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #6b5b47;
+            }
+        """)
+        
+        # 内容容器
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        
+        # 使用QTextBrowser来显示HTML格式的教程
+        tutorial_browser = QTextBrowser()
+        tutorial_browser.setHtml(TUTORIAL_TEXT)
+        tutorial_browser.setStyleSheet("""
+            QTextBrowser {
+                background-color: rgba(255, 255, 255, 0.95);
+                border: none;
+                font-size: 13px;
+                line-height: 1.6;
+                padding: 15px;
+            }
+            QTextBrowser a {
+                color: #81c29c;
+                text-decoration: none;
+            }
+            QTextBrowser a:hover {
+                color: #a8d8b9;
+                text-decoration: underline;
+            }
+        """)
+        tutorial_browser.setOpenExternalLinks(True)
+        
+        content_layout.addWidget(tutorial_browser)
+        scroll_area.setWidget(content_widget)
+        main_layout.addWidget(scroll_area)
+        
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_button = QPushButton("关闭教程")
+        close_button.setStyleSheet("""
+            QPushButton {
+                padding: 10px 25px;
+                background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                                 stop: 0 #a8d8b9, stop: 1 #81c29c);
+                color: #2e2e2e;
+                border: 2px solid #8b7355;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                                 stop: 0 #b8e8c9, stop: 1 #91d2ac);
+                border: 2px solid #6b5b47;
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                                 stop: 0 #81c29c, stop: 1 #a8d8b9);
+            }
+        """)
+        close_button.clicked.connect(self.accept)
+        
+        button_layout.addWidget(close_button)
+        main_layout.addLayout(button_layout)
+        
+        # 设置窗口样式
+        self.setStyleSheet("""
+            TutorialDialog {
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                          stop: 0 #f5f0e6, stop: 1 #e6d4b3);
+                border: 3px solid #8b7355;
+                border-radius: 12px;
+            }
+        """)
 
 
 DELETE_CONFIRMATION = """⚠️ 您确定要删除以下Mod吗？
@@ -639,10 +795,8 @@ class StardewModInstaller(QMainWindow):
 
     def show_tutorial(self):
         """显示使用教程"""
-        msg = QMessageBox(self)
-        msg.setWindowTitle("使用教程")
-        msg.setText(TUTORIAL_TEXT)
-        msg.exec()
+        tutorial_dialog = TutorialDialog(self)
+        tutorial_dialog.exec()
 
     def closeEvent(self, event):
         """关闭事件"""
