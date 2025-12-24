@@ -1,0 +1,213 @@
+QMainWindow {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #e6d4b3, stop: 1 #c8b89d);
+}
+
+QGroupBox {
+    font-weight: bold;
+    font-size: 14px;
+    border: 2px solid #8b7355;
+    border-radius: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    background-color: rgba(255, 255, 255, 0.3);
+    color: #5d4037;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 15px;
+    padding: 0 8px 0 8px;
+    background-color: rgba(230, 212, 179, 0.7);
+    border-radius: 4px;
+    border: 1px solid #8b7355;
+    color: #5d4037;
+}
+
+QLabel {
+    color: #5d4037;
+    font-size: 12px;
+}
+
+QPushButton {
+    padding: 8px 16px;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #a8d8b9, stop: 1 #81c29c);
+    color: #2e2e2e;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #b8e8c9, stop: 1 #91d2ac);
+    border: 1px solid #6b5b47;
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #81c29c, stop: 1 #a8d8b9);
+}
+
+QPushButton:disabled {
+    background-color: #cccccc;
+    color: #888888;
+    border: 1px solid #aaaaaa;
+}
+
+QPushButton#delete_mods_btn {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #ff9a8b, stop: 1 #ff6b6b);
+}
+
+QPushButton#delete_mods_btn:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #ffaaa0, stop: 1 #ff7b7b);
+}
+
+QTextEdit {
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #333333;
+}
+
+QListWidget {
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.8);
+    alternate-background-color: rgba(230, 212, 179, 0.3);
+    color: #333333;
+    outline: none;
+    show-decoration-selected: 0;
+}
+
+QListWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #d0c0a0;
+    border-radius: 4px;
+    margin: 2px;
+    background-color: rgba(230, 212, 179, 0.4);
+}
+
+QListWidget::item:selected {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #a8d8b9, stop: 1 #81c29c);
+    color: #2e2e2e;
+    border: 1px solid #8b7355;
+}
+
+QListWidget::item:hover {
+    background-color: rgba(200, 230, 210, 0.6);
+}
+
+QListWidget::item:focus {
+    outline: none;
+}
+
+QProgressBar {
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    text-align: center;
+    color: #5d4037;
+    font-weight: bold;
+}
+
+QProgressBar::chunk {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                     stop: 0 #a8d8b9, stop: 1 #81c29c);
+    border-radius: 5px;
+}
+
+QFrame {
+    border: 2px dashed #8b7355;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+QMessageBox {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #e6d4b3, stop: 1 #c8b89d);
+    border-radius: 8px;
+}
+
+QMessageBox QLabel {
+    color: #5d4037;
+    font-size: 12px;
+}
+
+QMessageBox QPushButton {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #a8d8b9, stop: 1 #81c29c);
+    color: #2e2e2e;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #b8e8c9, stop: 1 #91d2ac);
+}
+
+/* 成功消息框样式 */
+QMessageBox#success {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #e8f5e9, stop: 1 #c8e6c9);
+}
+
+QMessageBox#success QLabel {
+    color: #2e7d32;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QMessageBox#success QPushButton {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #a8d8b9, stop: 1 #81c29c);
+    color: #2e2e2e;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QMessageBox#success QPushButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #b8e8c9, stop: 1 #91d2ac);
+}
+
+/* 错误消息框样式 */
+QMessageBox#error {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #ffebee, stop: 1 #ffcdd2);
+}
+
+QMessageBox#error QLabel {
+    color: #c62828;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QMessageBox#error QPushButton {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #ff9a8b, stop: 1 #ff6b6b);
+    color: white;
+    border: 1px solid #8b7355;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QMessageBox#error QPushButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, 
+                                     stop: 0 #ffaaa0, stop: 1 #ff7b7b);
+}

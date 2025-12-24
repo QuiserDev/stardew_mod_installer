@@ -23,14 +23,15 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-TUTORIAL_TEXT = """
+TUTORIAL_TEXT = """📖 星露谷物语 Mod 安装器 使用教程
+
 1. 设置Mods文件夹
     - 首次启动会自动尝试查找
     - 如果找不到，请手动选择，路径如下
     - Steam -> Stardew Valley -> 齿轮图标(管理) -> 浏览本地文件 -> Mods子文件夹
 
 2. 安装Mod
-    - 将zip文件拖放到窗口中
+    - 将zip文件拖放到窗口中的虚线框区域
     - 或点击"手动选择Mod文件"
     - 程序会自动解压到Mods文件夹
 
@@ -47,7 +48,7 @@ TUTORIAL_TEXT = """
 """
 
 
-DELETE_CONFIRMATION = """您确定要删除以下Mod吗？
+DELETE_CONFIRMATION = """⚠️ 您确定要删除以下Mod吗？
 
 {}
 
@@ -136,7 +137,8 @@ class StardewModInstaller(QMainWindow):
         self.setWindowTitle("星露谷物语 Mod 安装器")
         icon_path = resource_path("icon.ico")
         self.setWindowIcon(QIcon(icon_path))
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 700)
+        self.setMinimumSize(800, 600)
 
         # 设置拖放接受
         self.setAcceptDrops(True)
@@ -152,9 +154,9 @@ class StardewModInstaller(QMainWindow):
         top_layout = QVBoxLayout()
         
         # 标题
-        title_label = QLabel("星露谷物语 Mod 安装器")
+        title_label = QLabel("📦 星露谷物语 Mod 安装器")
         title_label.setStyleSheet(
-            "font-size: 24px; font-weight: bold; padding: 10px;")
+            "font-size: 26px; font-weight: bold; padding: 15px; color: #5d4037;")
         title_label.setAlignment(Qt.AlignCenter)
         top_layout.addWidget(title_label)
 
@@ -164,7 +166,7 @@ class StardewModInstaller(QMainWindow):
 
         self.folder_label = QLabel("未设置Mods文件夹")
         self.folder_label.setStyleSheet(
-            "padding: 5px; background-color: #f0f0f0; border: 1px solid #ccc;")
+            "padding: 8px; background-color: rgba(255, 255, 255, 0.6); border: 1px solid #8b7355; border-radius: 6px; font-weight: bold;")
         self.folder_label.setWordWrap(True)
         self.folder_label.setAlignment(Qt.AlignCenter)  # 居中对齐
         folder_layout.addWidget(self.folder_label)
@@ -207,8 +209,8 @@ class StardewModInstaller(QMainWindow):
         self.refresh_mods_btn.clicked.connect(self.refresh_installed_mods)
         
         self.delete_mods_btn = QPushButton("删除选中Mod")
+        self.delete_mods_btn.setObjectName("delete_mods_btn")
         self.delete_mods_btn.clicked.connect(self.delete_selected_mods)
-        self.delete_mods_btn.setStyleSheet("background-color: #f44336;")  # Red background
         
         mod_management_layout.addWidget(self.refresh_mods_btn)
         mod_management_layout.addWidget(self.delete_mods_btn)
@@ -222,21 +224,28 @@ class StardewModInstaller(QMainWindow):
 
         # 拖放区域
         drop_frame = QFrame()
+        drop_frame.setObjectName("drop_frame")
         drop_frame.setFrameStyle(QFrame.StyledPanel | QFrame.Sunken)
         drop_frame.setAcceptDrops(True)
         drop_frame.setMinimumHeight(150)
         drop_layout = QVBoxLayout(drop_frame)
 
-        drop_label = QLabel("拖放Mod压缩包到这里")
-        drop_label.setAlignment(Qt.AlignCenter)
-        drop_label.setStyleSheet(
-            "font-size: 18px; color: #666; padding: 20px;")
-        drop_layout.addWidget(drop_label)
-
-        drop_hint = QLabel("支持.zip格式的Mod文件")
-        drop_hint.setAlignment(Qt.AlignCenter)
-        drop_hint.setStyleSheet("color: #999;")
-        drop_layout.addWidget(drop_hint)
+        # 组合所有文本在一个标签中
+        drop_text = QLabel("📦\n拖放Mod压缩包到这里\n支持.zip格式的Mod文件")
+        drop_text.setAlignment(Qt.AlignCenter)
+        drop_text.setStyleSheet("""
+            QLabel {
+                font-size: 15px; 
+                color: #5d4037; 
+                padding: 25px; 
+                qproperty-wordWrap: true;
+                font-weight: bold;
+            }
+            QLabel:hover {
+                color: #8b7355;
+            }
+        """)
+        drop_layout.addWidget(drop_text)
 
         # 设置拖放事件
         drop_frame.dragEnterEvent = self.drag_enter_event
@@ -252,8 +261,8 @@ class StardewModInstaller(QMainWindow):
         # 状态显示
         self.status_text = QTextEdit()
         self.status_text.setReadOnly(True)
-        self.status_text.setMaximumHeight(150)
-        self.status_text.setPlaceholderText("无日志")
+        self.status_text.setMaximumHeight(180)
+        self.status_text.setPlaceholderText("安装状态和日志将显示在这里...")
         right_layout.addWidget(self.status_text)
 
         # 按钮区域
@@ -282,43 +291,14 @@ class StardewModInstaller(QMainWindow):
         # 将下方布局添加到主布局中
         main_layout.addLayout(bottom_layout)
 
-        # 设置样式
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f5f5f5;
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #ccc;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-            QPushButton {
-                padding: 8px 16px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-            }
-            QTextEdit {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                font-family: Consolas, monospace;
-            }
-        """)
+        # 从外部文件加载样式
+        try:
+            with open("style.qss", "r", encoding="utf-8") as f:
+                style = f.read()
+            self.setStyleSheet(style)
+        except FileNotFoundError:
+            # 如果样式文件不存在，使用默认样式
+            pass
 
     def load_settings(self):
         """加载保存的设置"""
@@ -478,14 +458,41 @@ class StardewModInstaller(QMainWindow):
         self.add_status(message)
 
         if success:
-            QMessageBox.information(self, "成功", "Mod安装完成！")
+            success_msg = QMessageBox(self)
+            success_msg.setWindowTitle("✅ 成功")
+            success_msg.setText("Mod安装完成！")
+            success_msg.exec()
             self.refresh_installed_mods()
         else:
-            QMessageBox.warning(self, "错误", "Mod安装失败，请检查控制台输出。")
+            error_msg = QMessageBox(self)
+            error_msg.setWindowTitle("❌ 错误")
+            error_msg.setText("Mod安装失败，请检查控制台输出。")
+            error_msg.exec()
 
     def add_status(self, message):
         """添加状态消息"""
-        self.status_text.append(f"[{self.get_current_time()}] {message}")
+        # 根据消息类型添加不同的颜色
+        timestamp = f"[{self.get_current_time()}]"
+        if "✓" in message or "成功" in message:
+            # 成功消息 - 绿色
+            self.status_text.setTextColor("#2e7d32")
+            self.status_text.append(f"{timestamp} {message}")
+        elif "✗" in message or "失败" in message or "错误" in message:
+            # 错误消息 - 红色
+            self.status_text.setTextColor("#c62828")
+            self.status_text.append(f"{timestamp} {message}")
+        elif "警告" in message or "注意" in message:
+            # 警告消息 - 橙色
+            self.status_text.setTextColor("#ef6c00")
+            self.status_text.append(f"{timestamp} {message}")
+        else:
+            # 普通消息 - 默认颜色
+            self.status_text.setTextColor("#333333")
+            self.status_text.append(f"{timestamp} {message}")
+        
+        # 恢复默认颜色
+        self.status_text.setTextColor("#333333")
+        
         self.status_text.verticalScrollBar().setValue(
             self.status_text.verticalScrollBar().maximum()
         )
@@ -591,14 +598,14 @@ class StardewModInstaller(QMainWindow):
         # 创建确认对话框
         mods_text = "\n".join([f"  - {display_text}" for display_text in display_texts])
         confirmation_msg = DELETE_CONFIRMATION.format(mods_text)
-
-        reply = QMessageBox.question(
-            self,
-            "确认删除Mod",
-            confirmation_msg,
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
+        
+        msg = QMessageBox(self)
+        msg.setWindowTitle("确认删除")
+        msg.setText(confirmation_msg)
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.No)
+        
+        reply = msg.exec()
 
         if reply == QMessageBox.Yes:
             deleted_count = 0
@@ -631,8 +638,7 @@ class StardewModInstaller(QMainWindow):
                 QMessageBox.warning(self, "删除完成", result_msg)
 
     def show_tutorial(self):
-        """显示教程"""
-
+        """显示使用教程"""
         msg = QMessageBox(self)
         msg.setWindowTitle("使用教程")
         msg.setText(TUTORIAL_TEXT)
