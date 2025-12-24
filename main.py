@@ -614,8 +614,8 @@ class StardewModInstaller(QMainWindow):
         
         1. 设置Mods文件夹
            - 首次启动会自动尝试查找
-           - 如果找不到，请手动选择
-           - 路径通常为: Steam/steamapps/common/Stardew Valley/Mods
+           - 如果找不到，请手动选择，路径如下
+           - Steam - Stardew Valley - 齿轮图标(管理) - 浏览本地文件 - Mods子文件夹
         
         2. 安装Mod
            - 将zip文件拖放到窗口中
@@ -624,6 +624,7 @@ class StardewModInstaller(QMainWindow):
         
         3. 注意事项
            - 确保星露谷已安装SMAPI
+           - SMAPI也可以用本软件安装
            - 安装后需要重启游戏
            - 某些Mod可能需要依赖项
         
