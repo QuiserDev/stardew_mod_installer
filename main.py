@@ -623,14 +623,21 @@ class StardewModInstaller(QMainWindow):
         
         if os.path.exists(manifest_path):
             try:
-                with open(manifest_path, 'r', encoding='utf-8') as f:
+                with open(manifest_path, 'r', encoding='utf-8-sig') as f:
                     manifest = json5.load(f)
                 
                 name = manifest.get("Name", os.path.basename(mod_path))
-                author = manifest.get("Author", "未知作者")
-                version = manifest.get("Version", "未知版本")
+
+                nexus_id = ""
+                update_keys = manifest.get("UpdateKeys", [])
+                if not update_keys:
+                    return name
+                for key in update_keys:
+                    if key.startswith("Nexus:"):
+                        nexus_id = key.split(":")[1]
+                        break
                 
-                return f"{name} - v{version} ({author})"
+                return f"{name} ({nexus_id})"
             
             except Exception:
                 pass
