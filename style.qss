@@ -18,7 +18,7 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 15px;
     padding: 0 8px 0 8px;
-    background-color: rgba(230, 212, 179, 0.7);
+    background-color: rgb(230, 212, 179);
     border-radius: 4px;
     border: 1px solid #8b7355;
     color: #5d4037;
